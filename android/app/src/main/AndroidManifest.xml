@@ -25,8 +25,6 @@
   <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
   <uses-permission android:name="com.google.android.gms.permission.AD_ID"
       tools:ignore="AdvertisingIdPolicy" />
-  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
   <application
     android:name=".name.MainApplication"

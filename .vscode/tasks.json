@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Open React Inspector (DevTools)",
+      "type": "shell",
+      "command": "adb reverse tcp:8097 tcp:8097 && react-devtools",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Start Metro",
+      "type": "shell",
+      "command": "npm start",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Run Android",
+      "type": "shell",
+      "command": "npm run android",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run iOS",
+      "type": "shell",
+      "command": "npm run ios",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean Android",
+      "type": "shell",
+      "command": "./gradlew clean",
+      "options": {
+        "cwd": "${workspaceFolder}/android"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
