@@ -1,23 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigationState } from '@react-navigation/native';
-import { Home, Attendance, ProfileIcon, DashboardIcon } from '../Helper/IconsLoad';
+import { Home, DashboardIcon, ProfileIcon } from '../Helper/IconsLoad';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { BOTTOM_TAB_HEIGHT } from '../Helper/Helper';
+
+const SLIDER_WIDTH = 60;
+const NAVBAR_HEIGHT = 55;
+const PADDING = 2;
 
 const BottomNavigation = ({ hide_profile_tab, navigation }) => {
   const [activeTab, setActiveTab] = useState('Home');
   const tabIndex = useSharedValue(0);
   const navigationState = useNavigationState(state => state);
-  const { width } = Dimensions.get('window');
+
   const TAB_COUNT = hide_profile_tab ? 1 : 3;
-  const totalWidth = width * 0.9;
-  const tabWidth = hide_profile_tab ? totalWidth : totalWidth / TAB_COUNT;
+  const containerWidth = TAB_COUNT * SLIDER_WIDTH + PADDING * 2;
 
   const tabPositions = {
     Home: 0,
@@ -25,29 +27,26 @@ const BottomNavigation = ({ hide_profile_tab, navigation }) => {
     Profile: 2,
   };
 
-  // ✅ Animated indicator
+  // ✅ Animated indicator centered with 2px padding to outer bar
   const animatedIndicatorStyle = useAnimatedStyle(() => {
-    const targetLeft = hide_profile_tab
-      ? (totalWidth - tabWidth) / 2
-      : tabIndex.value * tabWidth;
+    const targetLeft = PADDING + tabIndex.value * SLIDER_WIDTH;
     return {
       left: withTiming(targetLeft, {
-        duration: 800,
+        duration: 350,
         easing: Easing.out(Easing.exp),
       }),
-      width: withTiming(tabWidth, {
-        duration: 800,
-        easing: Easing.out(Easing.exp),
-      }),
+      width: SLIDER_WIDTH,
     };
   });
 
-  // ✅ Hook calls OUTSIDE render (not dynamically created)
+  // ✅ Tab icon animation styles
   const homeTabStyle = useAnimatedStyle(() => {
     const isActive = Math.round(tabIndex.value) === 0;
     return {
       opacity: withTiming(isActive ? 1 : 0.7),
-      transform: [{ scale: withTiming(isActive ? 1.2 : 0.9) }],
+      transform: [{ scale: withTiming(isActive ? 1.15 : 0.95) }],
+      justifyContent: 'center',
+      alignItems: 'center',
     };
   });
 
@@ -55,7 +54,9 @@ const BottomNavigation = ({ hide_profile_tab, navigation }) => {
     const isActive = Math.round(tabIndex.value) === 1;
     return {
       opacity: withTiming(isActive ? 1 : 0.7),
-      transform: [{ scale: withTiming(isActive ? 1.2 : 0.9) }],
+      transform: [{ scale: withTiming(isActive ? 1.15 : 0.95) }],
+      justifyContent: 'center',
+      alignItems: 'center',
     };
   });
 
@@ -63,7 +64,9 @@ const BottomNavigation = ({ hide_profile_tab, navigation }) => {
     const isActive = Math.round(tabIndex.value) === 2;
     return {
       opacity: withTiming(isActive ? 1 : 0.7),
-      transform: [{ scale: withTiming(isActive ? 1.2 : 0.9) }],
+      transform: [{ scale: withTiming(isActive ? 1.15 : 0.95) }],
+      justifyContent: 'center',
+      alignItems: 'center',
     };
   });
 
@@ -105,32 +108,42 @@ const BottomNavigation = ({ hide_profile_tab, navigation }) => {
   const handleTabPress = tabName => {
     setActiveTab(tabName);
     navigation.navigate(tabName === 'Profile' ? 'ProfileStack' : tabName);
-    tabIndex.value = withTiming(tabPositions[tabName]);
+    tabIndex.value = tabPositions[tabName];
   };
 
   return (
-    <View style={[styles.container, { height: BOTTOM_TAB_HEIGHT }]}>
+    <View style={[styles.container, { width: containerWidth, height: NAVBAR_HEIGHT }]}>
+      {/* 2px padded sliding indicator */}
       <Animated.View style={[styles.activeIndicator, animatedIndicatorStyle]} />
 
       {/* Home */}
-      <TouchableOpacity style={styles.tab} onPress={() => handleTabPress('Home')}>
+      <TouchableOpacity
+        style={styles.tab}
+        activeOpacity={0.8}
+        onPress={() => handleTabPress('Home')}>
         <Animated.View style={homeTabStyle}>
-          <Home color={'white'} width={25} height={25} />
+          <Home color={'white'} width={22} height={22} />
         </Animated.View>
       </TouchableOpacity>
 
       {/* Dashboard + Profile (if allowed) */}
       {!hide_profile_tab && (
         <>
-          <TouchableOpacity style={styles.tab} onPress={() => handleTabPress('Dashboard')}>
+          <TouchableOpacity
+            style={styles.tab}
+            activeOpacity={0.8}
+            onPress={() => handleTabPress('Dashboard')}>
             <Animated.View style={dashboardTabStyle}>
-              <DashboardIcon color={'white'} width={25} height={25} />
+              <DashboardIcon color={'white'} width={22} height={22} />
             </Animated.View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.tab} onPress={() => handleTabPress('Profile')}>
+          <TouchableOpacity
+            style={styles.tab}
+            activeOpacity={0.8}
+            onPress={() => handleTabPress('Profile')}>
             <Animated.View style={profileTabStyle}>
-              <ProfileIcon color={'white'} width={25} height={25} />
+              <ProfileIcon color={'white'} width={22} height={22} />
             </Animated.View>
           </TouchableOpacity>
         </>
@@ -144,26 +157,29 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     backgroundColor: '#CA282C',
-    width: '90%',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
     alignItems: 'center',
     borderRadius: 50,
     alignSelf: 'center',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   tab: {
-    flex: 1,
+    width: SLIDER_WIDTH,
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 50,
+    zIndex: 1,
   },
   activeIndicator: {
     position: 'absolute',
     backgroundColor: '#AE181C',
-    height: '100%',
+    top: PADDING,
+    bottom: PADDING,
     borderRadius: 50,
   },
 });
