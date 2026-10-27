@@ -1,0 +1,64 @@
+<resources>
+
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar.Bridge">
+        <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <item name="android:datePickerDialogTheme">@style/MyDialogTheme</item>
+        <item name="android:timePickerDialogTheme">@style/MyDialogTheme</item>
+
+        <item name="materialCalendarFullscreenTheme">@style/Theme.App.MaterialCalendar.Fullscreen</item>
+        <item name="materialCalendarTheme">@style/ThemeOverlay.App.MaterialCalendar</item>
+
+        <item name="materialTimePickerTheme">@style/AppTheme.MaterialTimePickerTheme</item>
+    </style>
+
+
+
+    <style name="MyDialogTheme" parent="Theme.AppCompat.Light.Dialog">
+        <item name="colorAccent">@color/brand_red</item>
+    </style>
+
+    <style name="ThemeOverlay.App.MaterialCalendar"
+        parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
+        <item name="colorPrimary">@color/brand_red</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/black</item>
+        <item name="colorAccent">@color/brand_red</item>
+        <item name="colorControlActivated">@color/brand_red</item>
+        <item name="colorControlHighlight">@color/brand_red</item>
+        <item name="colorControlNormal">@color/brand_red</item>
+    </style>
+
+    <style name="Theme.App.MaterialCalendar.Fullscreen"
+        parent="ThemeOverlay.MaterialComponents.MaterialCalendar.Fullscreen">
+
+        <item name="colorPrimary">@color/brand_red</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorAccent">@color/brand_red</item>
+        <item name="colorControlActivated">@color/brand_red</item>
+        <item name="colorControlHighlight">@color/brand_red</item>
+        <item name="colorControlNormal">@color/brand_red</item>
+        <item name="actionMenuTextColor">@color/brand_red</item>
+        <item name="colorButtonNormal">@color/brand_red</item>
+
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/black</item>
+        <item name="colorOnBackground">@color/black</item>
+
+        <item name="android:colorBackground">@color/white</item>
+    </style>
+
+    <style name="BootTheme" parent="Theme.BootSplash">
+        <item name="bootSplashBackground">@color/white</item>
+        <item name="bootSplashLogo">@drawable/bootsplash_logo</item>
+        <item name="postBootSplashTheme">@style/AppTheme</item>
+    </style>
+
+    <style name="AppTheme.MaterialTimePickerTheme" parent="ThemeOverlay.MaterialComponents.TimePicker">
+        <item name="colorPrimary">@color/gray</item>
+        <item name="materialClockStyle">@style/App.TimePicker.Clock</item>
+    </style>
+    <style name="App.TimePicker.Clock" parent="Widget.MaterialComponents.TimePicker.Clock">
+        <item name="clockHandColor">@color/brand_red</item>
+    </style>
+</resources>

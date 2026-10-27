@@ -1,0 +1,284 @@
+
+
+
+        apply plugin: "com.android.application"
+        apply plugin: "org.jetbrains.kotlin.android"
+        apply plugin: "com.facebook.react"
+        apply plugin: "com.google.gms.google-services"
+        apply plugin: "com.google.firebase.crashlytics"
+        apply plugin: 'com.google.firebase.firebase-perf'
+        apply plugin: "com.spotify.ruler"
+
+
+
+        /**
+        * This is the configuration block to customize your React Native Android app.
+        * By default you don't need to apply any configuration, just uncomment the lines you need.
+        */
+        react {
+            /* Folders */
+            //   The root of your project, i.e. where "package.json" lives. Default is '../..'
+            // root = file("../../")
+            //   The folder where the react-native NPM package is. Default is ../../node_modules/react-native
+            // reactNativeDir = file("../../node_modules/react-native")
+            //   The folder where the react-native Codegen package is. Default is ../../node_modules/@react-native/codegen
+            // codegenDir = file("../../node_modules/@react-native/codegen")
+            //   The cli.js file which is the React Native CLI entrypoint. Default is ../../node_modules/react-native/cli.js
+            // cliFile = file("../../node_modules/react-native/cli.js")
+
+            /* Variants */
+            //   The list of variants to that are debuggable. For those we're going to
+            //   skip the bundling of the JS bundle and the assets. By default is just 'debug'.
+            //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
+            // debuggableVariants = ["liteDebug", "prodDebug"]
+
+            /* Bundling */
+            //   A list containing the node command and its flags. Default is just 'node'.
+            // nodeExecutableAndArgs = ["node"]
+            //
+            //   The command to run when bundling. By default is 'bundle'
+            // bundleCommand = "ram-bundle"
+            //
+            //   The path to the CLI configuration file. Default is empty.
+            // bundleConfig = file(../rn-cli.config.js)
+            //
+            //   The name of the generated asset file containing your JS bundle
+            // bundleAssetName = "MyApplication.android.bundle"
+            //
+            //   The entry file for bundle generation. Default is 'index.android.js' or 'index.js'
+            // entryFile = file("../js/MyApplication.android.js")
+            //
+            //   A list of extra flags to pass to the 'bundle' commands.
+            //   See https://github.com/react-native-community/cli/blob/main/docs/commands.md#bundle
+            // extraPackagerArgs = []
+
+            /* Hermes Commands */
+            //   The hermes compiler command to run. By default it is 'hermesc'
+            // hermesCommand = "$rootDir/my-custom-hermesc/bin/hermesc"
+            //
+            //   The list of flags to pass to the Hermes compiler. By default is "-O", "-output-source-map"
+            // hermesFlags = ["-O", "-output-source-map"]
+
+            /* Autolinking */
+            autolinkLibrariesWithApp()
+        }
+
+        /**
+        * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
+        */
+        def enableProguardInReleaseBuilds = true
+        def enableSeparateBuildPerCPUArchitecture = true
+
+        /**
+        * The preferred build flavor of JavaScriptCore (JSC)
+        *
+        * For example, to use the international variant, you can use:
+        * `def jscFlavor = 'org.webkit:android-jsc-intl:+'`
+        *
+        * The international variant includes ICU i18n library and necessary data
+        * allowing to use e.g. `Date.toLocaleString` and `String.localeCompare` that
+        * give correct results when using with locales other than en-US. Note that
+        * this variant is about 6MiB larger per architecture than default.
+        */
+        def jscFlavor = 'org.webkit:android-jsc:+'
+
+        android {
+            androidResources {
+                noCompress += ["bundle"]
+            }
+            compileOptions {
+                // Flag to enable support for the new language APIs
+                 coreLibraryDesugaringEnabled = true
+
+                // Sets Java compatibility to Java 8
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+            ndkVersion rootProject.ext.ndkVersion
+            buildToolsVersion rootProject.ext.buildToolsVersion
+            compileSdk rootProject.ext.compileSdkVersion
+
+
+            packagingOptions {
+                // Add these lines to handle 16KB page size issue
+                jniLibs {
+                    useLegacyPackaging = true
+                    // excludes += ["**/x86/**", "**/x86_64/**"]
+                    // excludes += ['lib/x86_64/libpdfiumandroid.so', 'lib/x86_64/libgifimage.so']
+                }
+
+    //            // Exclude problematic libraries if needed
+            }
+
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+
+            namespace "com.sysboat"
+            defaultConfig {
+                applicationId "com.sysboat"
+                minSdkVersion rootProject.ext.minSdkVersion
+                targetSdkVersion rootProject.ext.targetSdkVersion
+                versionCode 64
+                versionName "1.6.0"
+
+            }
+            signingConfigs {
+                    debug {
+                    storeFile file('debug.keystore')
+                    storePassword 'android'
+                    keyAlias 'androiddebugkey'
+                    keyPassword 'android'
+            }
+            release {
+                    if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                        storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                        storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                        keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                        keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+                    }
+                }
+            }
+            buildTypes {
+                debug {
+                    signingConfig signingConfigs.debug
+                    buildConfigField("String", "API_BASE_URL", "\"https://api.sysboat.com\"")
+                }
+                release {
+                    minifyEnabled true
+                    proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+                    shrinkResources true
+
+                    ndk {
+                        debugSymbolLevel 'FULL'
+                    }
+
+                    packagingOptions {
+                        jniLibs {
+                            useLegacyPackaging true
+                        }
+                    }
+
+                    signingConfig signingConfigs.release
+                    buildConfigField("String", "API_BASE_URL", "\"https://api.sysboat.com\"")
+                }
+
+            }
+
+            configurations.all {
+                resolutionStrategy {
+                    force "com.microsoft.onnxruntime:onnxruntime-android:1.22.0"
+                }
+            }
+
+            buildFeatures {
+                buildConfig = true
+            }
+        }
+
+//        arm64-v8a	Most modern Android phones (64-bit). Recommended for testing.
+//        armeabi-v7a	Older 32-bit Android phones.
+//        x86_64	Modern Android Emulators on 64-bit computers.
+//        x86	Older 32-bit Android Emulators.
+
+        ruler {
+            abi.set("arm64-v8a")
+            locale.set("en")
+            screenDensity.set(480)
+            sdkVersion.set(34)
+        }
+
+        dependencies {
+            implementation  "androidx.datastore:datastore-core:1.2.1"
+            implementation "androidx.datastore:datastore-preferences:1.2.1"
+
+            implementation "androidx.security:security-crypto:1.1.0"
+
+            implementation 'com.google.ai.edge.litert:litert:1.4.1'
+            implementation 'com.google.ai.edge.litert:litert-support:1.4.1'
+            implementation 'com.google.ai.edge.litert:litert-metadata:1.4.1'
+            implementation 'com.google.ai.edge.litert:litert-api:1.4.1'
+
+            // Add in android/app/build.gradle (dependencies block)
+            def camerax_version = "1.4.2"
+            implementation "androidx.camera:camera-core:${camerax_version}"
+            implementation "androidx.camera:camera-camera2:${camerax_version}"
+            implementation "androidx.camera:camera-lifecycle:${camerax_version}"
+            implementation "androidx.camera:camera-view:${camerax_version}"
+            implementation "androidx.camera:camera-extensions:${camerax_version}"
+
+            //ML Kit (To detect faces)
+            implementation 'com.google.mlkit:face-detection:16.1.7'
+            implementation 'com.google.android.gms:play-services-mlkit-face-detection:17.1.0'
+
+            //TensorFlow Lite libraries (To recognize faces)
+//            implementation 'org.tensorflow:tensorflow-lite:2.17.0'
+//            implementation 'org.tensorflow:tensorflow-lite-gpu:2.17.0'
+//            implementation 'org.tensorflow:tensorflow-lite-support:0.5.0'
+
+            implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+            implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+
+            implementation("io.socket:socket.io-client:2.1.2") {
+                exclude group: "org.json", module: "json"
+            }
+
+            implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+            implementation("com.squareup.okhttp3:logging-interceptor:4.10.0")
+            implementation("com.squareup.okhttp3:okhttp-urlconnection:4.10.0")
+
+
+            implementation("androidx.activity:activity-ktx:1.11.0")
+            implementation("androidx.appcompat:appcompat:1.7.1")
+            implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4")
+
+            // Required for the Photo Picker
+
+            implementation("androidx.fragment:fragment-ktx:1.8.9")
+
+
+            implementation "androidx.work:work-runtime-ktx:2.11.0"
+
+            implementation 'com.facebook.fresco:fresco:3.6.0'
+            implementation 'com.facebook.fresco:animated-gif:3.6.0'
+
+
+            implementation 'io.legere:pdfiumandroid:1.0.32'
+            implementation 'com.google.code.gson:gson:2.13.1'
+
+            implementation 'com.google.android.material:material:1.13.0'
+            implementation "androidx.compose.material3:material3:1.3.2"
+            implementation("androidx.compose.ui:ui-tooling-preview:1.8.3")
+            implementation "androidx.compose.ui:ui:1.8.3"
+            implementation "androidx.activity:activity-compose:1.10.1"
+            implementation "com.google.accompanist:accompanist-pager:0.36.0"
+
+            implementation("com.google.android.play:app-update:2.1.0")
+            implementation("com.google.android.play:app-update-ktx:2.1.0")
+
+            implementation("com.google.firebase:firebase-perf")
+
+            implementation platform('com.google.firebase:firebase-bom:33.16.0')
+            implementation("com.google.firebase:firebase-crashlytics")
+            implementation("com.google.firebase:firebase-inappmessaging-display")
+            implementation 'com.google.firebase:firebase-analytics'
+            implementation("com.facebook.react:react-android")
+            implementation("androidx.core:core-ktx:1.17.0")
+            implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.21"
+            implementation 'com.google.android.gms:play-services-location:21.3.0'
+            implementation 'com.google.android.gms:play-services-base:18.9.0'
+
+    //        implementation 'com.google.android.gms:play-services-tflite-java:16.4.0'
+            coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
+            implementation "com.facebook.react:react-native:0.20.1"
+            implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
+
+
+
+            if (hermesEnabled.toBoolean()) {
+                implementation("com.facebook.react:hermes-android")
+            } else {
+                implementation jscFlavor
+            }
+        }

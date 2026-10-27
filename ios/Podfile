@@ -1,0 +1,124 @@
+require_relative '../node_modules/react-native/scripts/react_native_pods'
+require_relative '../node_modules/react-native-permissions/scripts/setup'
+
+platform :ios, '18.0'
+prepare_react_native_project!
+
+setup_permissions([
+  'Camera',
+  'LocationWhenInUse',
+  'LocationAlways',
+  'MediaLibrary',
+  'PhotoLibrary',
+  'Notifications',
+])
+
+target 'sysboat' do
+  use_frameworks! :linkage => :static
+  $RNFirebaseAsStaticFramework = true
+  $FirebaseSDKVersion = '12.10.0'
+
+  pod 'TensorFlowLiteSwift', '~> 2.14.0'
+
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => true,
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    installer.pods_project.targets.each do |target|
+      if target.name.start_with?('ML')
+          target.build_configurations.each do |config|
+            config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+          end
+      end
+      target.build_configurations.each do |config|
+        # This tells the linker to prefer simulator-compatible binaries
+        config.build_settings['ARCHS'] = 'arm64 x86_64'
+        
+        config.build_settings["EXCLUDED_ARCHS[sdk=iphonesimulator*]"] = "arm64"
+
+       
+        config.build_settings['ONLY_ACTIVE_ARCH'] = 'NO'
+        
+
+       
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        
+        config.build_settings['COPY_PHASE_STRIP'] = 'NO'
+        config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
+      end
+
+      if target.name == 'hermes-engine'
+        target.build_configurations.each do |config|
+          config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
+          config.build_settings['STRIP_DEBUG_SYMBOLS'] = 'NO'
+          config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
+          config.build_settings['COPY_PHASE_STRIP'] = 'NO'
+          config.build_settings['GCC_GENERATE_DEBUGGING_SYMBOLS'] = 'YES'
+        end
+      end
+    end
+
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      mac_catalyst_enabled: false
+    )
+    
+    hermes_xcframework_path = File.join(
+      Pod::Config.instance.installation_root,
+      'Pods/hermes-engine/destroot/Library/Frameworks/universal/hermes.xcframework'
+    )
+    
+    if File.exist?(hermes_xcframework_path)
+      puts "🔍 Found Hermes XCFramework at: #{hermes_xcframework_path}"
+      
+      platforms = {
+        'ios-arm64' => 'iOS Device',
+        'ios-arm64_x86_64-simulator' => 'iOS Simulator'
+      }
+      
+      platforms.each do |platform_path, platform_name|
+        framework_binary = File.join(
+          hermes_xcframework_path,
+          platform_path,
+          'hermes.framework/hermes'
+        )
+        
+        if File.exist?(framework_binary)
+          dsym_output_dir = File.join(
+            hermes_xcframework_path,
+            platform_path
+          )
+          
+          dsym_path = File.join(dsym_output_dir, 'hermes.framework.dSYM')
+          
+          unless File.exist?(dsym_path)
+            puts "🔧 Generating Hermes dSYM for #{platform_name}..."
+            system("dsymutil '#{framework_binary}' -o '#{dsym_path}'")
+            
+            if File.exist?(dsym_path)
+              puts "✅ Hermes dSYM generated for #{platform_name}"
+              
+              # Verify UUID
+              uuid_output = `dwarfdump --uuid '#{dsym_path}' 2>/dev/null`.strip
+              puts "   UUID: #{uuid_output}" unless uuid_output.empty?
+            else
+              puts "⚠️  Failed to generate dSYM for #{platform_name}"
+            end
+          else
+            puts "✓ Hermes dSYM already exists for #{platform_name}"
+          end
+        else
+          puts "⚠️  Framework binary not found for #{platform_name}: #{framework_binary}"
+        end
+      end
+    else
+      puts "⚠️  Hermes XCFramework not found at: #{hermes_xcframework_path}"
+    end
+  end
+end

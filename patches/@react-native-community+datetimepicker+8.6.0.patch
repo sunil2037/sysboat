@@ -1,0 +1,38 @@
+diff --git a/node_modules/@react-native-community/datetimepicker/android/src/main/java/com/reactcommunity/rndatetimepicker/RNDateTimePickerPackage.java b/node_modules/@react-native-community/datetimepicker/android/src/main/java/com/reactcommunity/rndatetimepicker/RNDateTimePickerPackage.java
+index 7b9274b..0b28171 100644
+--- a/node_modules/@react-native-community/datetimepicker/android/src/main/java/com/reactcommunity/rndatetimepicker/RNDateTimePickerPackage.java
++++ b/node_modules/@react-native-community/datetimepicker/android/src/main/java/com/reactcommunity/rndatetimepicker/RNDateTimePickerPackage.java
+@@ -3,7 +3,7 @@ package com.reactcommunity.rndatetimepicker;
+ 
+ import androidx.annotation.Nullable;
+ 
+-import com.facebook.react.BaseReactPackage;
++import com.facebook.react.TurboReactPackage;
+ import com.facebook.react.bridge.NativeModule;
+ import com.facebook.react.bridge.ReactApplicationContext;
+ import com.facebook.react.module.model.ReactModuleInfo;
+@@ -12,7 +12,7 @@ import com.facebook.react.module.model.ReactModuleInfoProvider;
+ import java.util.HashMap;
+ import java.util.Map;
+ 
+-public class RNDateTimePickerPackage extends BaseReactPackage {
++public class RNDateTimePickerPackage extends TurboReactPackage {
+   @Nullable
+   @Override
+   public NativeModule getModule(String name, ReactApplicationContext reactContext) {
+@@ -42,6 +42,7 @@ public class RNDateTimePickerPackage extends BaseReactPackage {
+           false, // canOverrideExistingModule
+           false, // needsEagerInit
+           false, // isCxxModule
++          false, // hasConstants
+           isTurboModule // isTurboModule
+         ));
+       moduleInfos.put(
+@@ -52,6 +53,7 @@ public class RNDateTimePickerPackage extends BaseReactPackage {
+           false, // canOverrideExistingModule
+           false, // needsEagerInit
+           false, // isCxxModule
++          false, // hasConstants
+           isTurboModule // isTurboModule
+         ));
+       moduleInfos.put(

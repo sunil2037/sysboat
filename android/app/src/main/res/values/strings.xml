@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">sysboat</string>
+    <string name="api_base_url">https://api.sysboat.com</string>
+</resources>

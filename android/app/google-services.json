@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "380259811245",
+    "project_id": "sysboat-10593",
+    "storage_bucket": "sysboat-10593.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:380259811245:android:68d9f4e549eae3dc1feb24",
+        "android_client_info": {
+          "package_name": "com.sysboat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAm82VnR5OgtEf_XevCMOPuUtffiL548Mw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

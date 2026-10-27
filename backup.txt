@@ -1,0 +1,501 @@
+import React, { useRef, useState, useEffect, useContext } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, StyleSheet, Animated } from 'react-native';
+import { Notification, Calendar, ReloadIcon, HandIcon, TotalHoursIcon, PunchInIcon, PunchOutIcon } from '../Helper/IconsLoad';
+import Clock from '../../assets/Icon/menwithclock.png'
+import LinearGradient from 'react-native-linear-gradient';
+import TimeAndDate from '../components/TimeAndDate';
+import CircularProgress from '../Helper/CircularProgress';
+import { PanGestureHandler, GestureHandlerRootView } from 'react-native-gesture-handler';
+import SwipeRightComponent from '../components/SwipeRightComponent';
+import BottomNavigation from '../navigation/BottomNavigation';
+import { AttendanceContext, AttendanceProvider } from '../Apis/AttendanceApi/AttendanceProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+const HomeScreen = ({ navigation }) => {
+  const { attendanceData, loading, fetchAttendance, checkIn, checkOut } = useContext(AttendanceContext);
+  const rotateValue = useRef(new Animated.Value(0)).current;
+  const [isFront, setIsFront] = useState(true);
+  const [showFrontProgress, setShowFrontProgress] = useState(false);
+  const [showBackProgress, setShowBackProgress] = useState(false);
+  const [clockInStatus, setClockInStatus] = useState(false);
+  const [checkInTime, setCheckInTime] = useState(null)
+  const [checkOutTime, setCheckOutTime] = useState(null)
+  const [clockin,setclockin]=useState(false);
+  const [daystatus,setdaystatus]=useState(false);
+  const [duration,setDuration]=useState(null);
+
+  const handleGesture = (event) => {
+    const { translationX } = event.nativeEvent;
+    if (translationX < -50 && isFront) {
+      flipToFront();
+    } else if (translationX > 50 && !isFront) {
+      flipToBack();
+    }
+  };
+
+  const handleClockIn = async () => {
+    setclockin(prev=>!prev);
+    try {
+      setShowFrontProgress(true);
+      setShowBackProgress(false);
+
+      let result = null;
+      if (clockInStatus=='true') {
+        result = await checkOut();
+        console.warn("clockoutdone");
+        console.warn("Check-out result:", result.message);
+      } else {
+        console.warn("clockindone");
+        result = await checkIn();
+        console.warn("Check-in result:", result.message);
+      }
+    } catch (error) {
+      console.warn("handleClockIn Error:", error);
+      console.warn(error);
+    } finally {
+      setShowFrontProgress(false); // Stop progress animation
+      console.warn("error");
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+        const i=await AsyncStorage.getItem('AttendanceStatus');
+        setClockInStatus(i);
+        const timein=await AsyncStorage.getItem('InTime');
+        setCheckInTime(timein);
+        const outtime=await AsyncStorage.getItem('check_out_time');
+        setCheckOutTime(outtime);
+        const duration=await AsyncStorage.getItem('duration');
+        setDuration(duration);
+        const daystate=await AsyncStorage.getItem('daystatus');
+        setdaystatus(daystate);
+    };
+
+    fetchData();
+
+    return () => {
+        console.warn("Cleanup"); 
+    };
+}, [clockin]);
+
+
+
+
+
+  const handleBreakIn = () => {
+    setShowBackProgress((prev) => !prev);
+    setShowFrontProgress(false);
+  };
+
+  const flipToFront = () => {
+    Animated.timing(rotateValue, {
+      toValue: 180,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start(() => setIsFront(false));
+  };
+
+  const flipToBack = () => {
+    Animated.timing(rotateValue, {
+      toValue: 0,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start(() => setIsFront(true));
+  };
+
+  const rotateY = rotateValue.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const frontOpacity = rotateValue.interpolate({
+    inputRange: [0, 90],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const backOpacity = rotateValue.interpolate({
+    inputRange: [90, 180],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      {/* <SwipeRightComponent /> */}
+      <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
+      <View style={{ height: '100%' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingHorizontal: 15 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity onPress={() => { navigation.navigate('Profile') }} style={{ width: 50, height: 50, backgroundColor: 'pink', borderRadius: 40 }}></TouchableOpacity>
+            <View>
+              <Text style={{ fontSize: 19, fontFamily: 'Poppins-Medium', }}>Hey John</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Poppins-Regular', color: '#6A7D94' }}>admin@gmail.com</Text>
+            </View>
+          </View>
+          <View>
+            <TouchableOpacity>
+              <ReloadIcon width={30} height={30} color={'#CA282C'} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={{ justifyContent: 'space-between', height: '100%', paddingBottom: 250 }}>
+          <View style={{}}>
+            <TimeAndDate />
+          </View>
+          <GestureHandlerRootView style={styles.container}>
+            <PanGestureHandler onGestureEvent={handleGesture}>
+              <View style={{ position: 'relative' }}>
+                <Animated.View style={{ justifyContent: 'center', alignItems: 'center', transform: [{ rotateY }], height: 250, }}>
+                  <Animated.View
+                    style={{
+                      position: 'absolute',
+                      opacity: frontOpacity,
+                      zIndex: isFront ? 1 : 0
+                    }}
+                  >
+                    <View style={styles.upperShadow}>
+                      <LinearGradient colors={['rgba(228,231,237,1)', 'rgba(255,255,255,1)']}
+                        style={[styles.shadow2,]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 0.5 }}
+                        locations={[0.2, 0.6]}
+                      >
+                        <TouchableOpacity onPress={handleClockIn} style={{ justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%', }}>
+                          <HandIcon width={34} height={52} color={!clockInStatus ? '#6FAB55' : '#CA282C'} />
+                          {clockInStatus=='true' ? (
+                            <Text style={{ fontFamily: 'Poppins-Bold', fontSize: 12, color: '#293646', textTransform: 'uppercase' }}>
+                              Punch Out
+                            </Text>
+                          ) : (
+                            <Text style={{ fontFamily: 'Poppins-Bold', fontSize: 12, color: '#293646', textTransform: 'uppercase' }}>
+                              Punch In
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      </LinearGradient>
+                      <LinearGradient colors={['#F1F1F1', '#F1F1F1', '#EAEDF3']}
+                        style={[styles.background]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 1 }}
+                        locations={[0.2, 0.6]}
+                      >
+                      </LinearGradient>
+                      {daystatus === 'true' && (
+                        <CircularProgress clockInStatus={daystatus} inTime={checkInTime} outTime={checkOutTime} />
+                      )}
+                    </View>
+
+                  </Animated.View>
+                  {/* back side  */}
+                  <Animated.View style={{ position: 'absolute', transform: [{ rotateY: '180deg' }], opacity: backOpacity, zIndex: !isFront ? 1 : 0 }}>
+                    <View style={styles.upperShadow}>
+                      <LinearGradient colors={['rgba(228,231,237,1)', 'rgba(255,255,255,1)']}
+                        style={[styles.shadow2,]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 0.5 }}
+                        locations={[0.2, 0.6]}
+                      >
+
+                        <TouchableOpacity onPress={handleBreakIn} style={{ justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' }}>
+                          <HandIcon width={34} height={52} />
+                          {showBackProgress ? (
+                            <Text style={{ fontFamily: 'Poppins-Bold', fontSize: 12, color: '#293646', textTransform: 'uppercase' }}>
+                              Back To Work
+                            </Text>
+                          ) : (
+                            <Text style={{ fontFamily: 'Poppins-Bold', fontSize: 12, color: '#293646', textTransform: 'uppercase' }}>
+                              Take A Break
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+
+                      </LinearGradient>
+                      <LinearGradient colors={['#F1F1F1', '#F1F1F1', '#EAEDF3']}
+                        style={[styles.background]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 1 }}
+                        locations={[0.2, 0.6]}
+                      >
+                      </LinearGradient>
+                      {showBackProgress && (
+
+                        <View style={{ position: 'absolute', top: -5, zIndex: 1 }}>
+                          <CircularProgress />
+                        </View>
+                      )}
+                    </View>
+
+                  </Animated.View>
+                </Animated.View>
+
+
+                <View style={{ justifyContent: 'center', paddingTop: 30, width: '100%', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#EEEEEE', width: 250, height: 50, borderRadius: 50 }}>
+                    <View style={{ width: 12, height: 12, backgroundColor: '#E89C1E', borderRadius: 10 }}></View>
+                    <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 12, color: '#6A7D94', lineHeight: 18 }}>Minimun half day time  reached</Text>
+                  </View>
+                </View>
+
+              </View>
+            </PanGestureHandler>
+          </GestureHandlerRootView>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 30, paddingTop: 30 }}>
+            <View style={{ alignItems: 'center' }}>
+              <PunchInIcon width={32} height={36} />
+              <Text style={{ fontFamily: 'Poppins-Medium', fontSize: 14, color: '#293646', paddingTop: 10, lineHeight: 18 }}>09:08 AM</Text>
+              <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 12, color: '#6A7D94' }}>Punch In</Text>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <PunchOutIcon width={32} height={36} />
+              <Text style={{ fontFamily: 'Poppins-Medium', fontSize: 14, color: '#293646', paddingTop: 10, lineHeight: 18 }}>09:08 AM</Text>
+              <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 12, color: '#6A7D94' }}>Punch Out</Text>
+            </View>
+
+
+            <View style={{ alignItems: 'center' }}>
+              <TotalHoursIcon width={32} height={36} />
+              <Text style={{ fontFamily: 'Poppins-Medium', fontSize: 14, color: '#293646', paddingTop: 10, lineHeight: 18 }}>09:08</Text>
+              <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 12, color: '#6A7D94' }}>Total Hours</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  background: {
+    width: 180,
+    height: 180,
+    borderRadius: 200,
+    position: 'absolute',
+
+  },
+  shadow2: {
+    width: 157,
+    height: 157,
+    borderRadius: 100,
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999
+  },
+  innerShadow: {
+    width: 179,
+    height: 179,
+    borderRadius: 500,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 200,
+    backgroundColor: '#fff',
+    borderWidth: 10,
+    borderColor: '#f0f0f0',
+  },
+  upperShadow: {
+    width: 227,
+    overflow: 'hidden',
+    height: 227,
+    backgroundColor: '#E2E6EA',
+    borderRadius: 500,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'white',
+    position: 'relative',
+  },
+});
+export default HomeScreen
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import React, { createContext, useEffect, useState } from 'react';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import base64 from 'base-64';
+
+const API_BASE_URL = 'https://6bb4-2402-e280-2303-50d-714b-5240-2f2c-f3b9.ngrok-free.app';
+
+export const AttendanceContext = createContext();
+
+export const AttendanceProvider = ({ children }) => {
+    const [loading, setLoading] = useState(false);
+    const [attendanceData, setAttendanceData] = useState(null);
+    const [data, setData] = useState(null);
+    const [token, setToken] = useState(null);
+    const [clockIn, setClockIn] = useState(false);
+    const [clockout, setClockout] = useState(false);
+    // Step 1: Fetch token and user data from AsyncStorage
+    useEffect(() => {
+        const fetchStoredData = async () => {
+            try {
+                const storedToken = await AsyncStorage.getItem('token');
+                const storedData = await AsyncStorage.getItem('data');
+
+                if (storedToken) {
+                    setToken(storedToken);
+                }
+
+                if (storedData) {
+                    const encodedData = base64.encode(storedData);
+                    setData(encodedData);
+                } else {
+                    setData(null);
+                }
+            } catch (error) {
+                console.warn("Error fetching data from AsyncStorage:", error);
+            }
+        };
+
+        fetchStoredData();
+    }, []);
+
+    useEffect(() => {
+        fetchAttendance();
+    }, [token, clockIn, clockout]);
+
+
+    const fetchAttendance = async () => {
+        if (!token) {
+            console.warn("Token is missing");
+            return;
+        }
+
+        const config = {
+            headers: { Authorization: `Bearer ${token}` }
+        };
+
+        setLoading(true);
+        try {
+            const response = await axios.post(`${API_BASE_URL}/Attendance/AttendanceGet`, {
+                TypeCheck: "TimeGet",
+                userData: data,
+            }, config);
+            console.warn("Attendance status" + response.data.status);
+            await AsyncStorage.setItem("daystatus", JSON.stringify(response.data.status));
+            if (JSON.stringify(response.data.status) == 'true') {
+                await AsyncStorage.setItem("InTime", new Date(response.data.InTime).toISOString());
+                await AsyncStorage.setItem('check_out_time', JSON.stringify(response.data.check_out_time));
+                await AsyncStorage.setItem('duration', JSON.stringify(response.data.duration));
+            } else {
+                console.warn("gus ja");
+                await AsyncStorage.setItem('AttendanceStatus', JSON.stringify(response.data.status));
+                await AsyncStorage.removeItem("InTime");
+                await AsyncStorage.removeItem('check_out_time');
+                await AsyncStorage.removeItem('duration');
+            }
+            console.warn(response.data.status);
+            setAttendanceData(response.data);
+            console.warn("response" + response);
+        } catch (error) {
+            console.warn("Error fetching attendances:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Check-in function
+    const checkIn = async () => {
+        console.warn("gus gya")
+        if (!token) {
+            console.warn("Token is missing");
+            return;
+        }
+
+        const config = {
+            headers: { Authorization: `Bearer ${token}` }
+        };
+
+        setLoading(true);
+
+        try {
+            const response = await axios.post(`${API_BASE_URL}/Attendancemark/Attendancemark`, {
+                type: "in",
+                dateTime: new Date().toISOString(),
+                latitude: "26.9137157",
+                longitude: "75.7402935",
+                userData: data
+            }, config);
+            console.warn("response" + response.data.status);
+            await AsyncStorage.setItem('AttendanceStatus', JSON.stringify(response.data.status));
+
+            setClockIn(prev => !prev);
+            console.warn(response);
+            return response.data;
+        } catch (error) {
+            console.warn("Check-in error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Check-out function
+    const checkOut = async () => {
+        if (!token) {
+            console.warn("Token is missing");
+            return;
+        }
+
+        const config = {
+            headers: { Authorization: `Bearer ${token}` }
+        };
+
+        setLoading(true);
+
+        try {
+            const response = await axios.post(`${API_BASE_URL}/Attendance/api/BreakDetails`, {
+                type: "out",
+                dateTime: new Date().toISOString(),
+                latitude: "26.9137157",
+                longitude: "75.7402935",
+                userData: data
+            }, config);
+            await AsyncStorage.setItem('AttendanceStatus', JSON.stringify(response.data.status));
+            setClockout(prev => !prev);
+            return response.data;
+        } catch (error) {
+            console.warn("Check-out error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <AttendanceContext.Provider value={{
+            attendanceData,
+            loading,
+            fetchAttendance,
+            checkIn,
+            checkOut
+        }}>
+            {children}
+        </AttendanceContext.Provider>
+    );
+};
