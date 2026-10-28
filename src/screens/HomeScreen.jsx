@@ -863,13 +863,13 @@ const HomeScreen = ({ navigation }) => {
         disabled={permissions?.hide_profile_tab == 1}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <Image
-          style={{ width: 50, height: 50, borderRadius: 50 }}
+          style={{ width: 44, height: 44, borderRadius: 22 }}
           source={{ uri: profileImageUri }}
           resizeMode={'cover'}
           onError={() => { }}
         />
-        <View>
-          <ThemedText size='lg' weight='Medium'>
+        <View style={{ justifyContent: 'center' }}>
+          <ThemedText size='md' weight='SemiBold'>
             {capitalizeFirstLetter(
               StringLengthLimit(
                 GetEmployeesProfileData?.data[0]?.full_name ||
@@ -878,7 +878,7 @@ const HomeScreen = ({ navigation }) => {
               )
             )}
           </ThemedText>
-          <ThemedText size='xs' weight='Regular' color='secondary' >
+          <ThemedText size='xs' weight='Regular' color='secondary'>
             {capitalizeFirstLetter(
               StringLengthLimit(
                 GetEmployeesProfileData?.data[0]?.official_email_id ||
@@ -894,30 +894,48 @@ const HomeScreen = ({ navigation }) => {
   );
 
   const renderActionButtons = () => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <TouchableOpacity
         disabled={loadingStates.reload}
-        onPress={handleReloadHome}>
+        onPress={handleReloadHome}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          backgroundColor: 'rgba(202, 40, 44, 0.06)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
         {loadingStates.reload ? (
-          <ActivityIndicator color={'#CA282C'} size={30} />
+          <ActivityIndicator color={'#CA282C'} size={18} />
         ) : (
-          <ReloadIcon width={30} height={30} color={'#CA282C'} />
+          <ReloadIcon width={20} height={20} color={'#CA282C'} />
         )}
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => navigation.navigate('NotificationScreen')}>
-        <Notification2 width={35} height={35} color={'#CA282C'} />
+        onPress={() => navigation.navigate('NotificationScreen')}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          backgroundColor: 'rgba(202, 40, 44, 0.06)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+        <Notification2 width={22} height={22} color={'#CA282C'} />
         {isNotification && (
           <View
             style={{
-              width: 10,
-              height: 10,
-              borderRadius: 50,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
               backgroundColor: '#E89C1E',
               position: 'absolute',
-              top: 5,
-              right: 5,
+              top: 7,
+              right: 7,
             }}
           />
         )}
@@ -1230,7 +1248,7 @@ const HomeScreen = ({ navigation }) => {
         />
 
         <View style={{ flex: 1 }}>
-          <View style={{ flex: 1, paddingBottom: 0, gap: 20 }}>
+          <View style={{ flex: 1, paddingBottom: 0, gap: 12 }}>
             <View
               style={{
                 flexDirection: 'row',
@@ -1240,7 +1258,7 @@ const HomeScreen = ({ navigation }) => {
                 paddingHorizontal: 15,
               }}>
               <Skeleton isLoading={profileDataLoadings || profileDataLoading} highlightColor={'#f5f5f5'} boneColor='#fff' animationType='pulse' layout={[
-                { key: "Profile-2", width: 40, height: 40, marginBottom: 10, borderRadius: 120, },
+                { key: "Profile-2", width: 44, height: 44, borderRadius: 22 },
               ]}>
                 {renderProfileSection()}
               </Skeleton>

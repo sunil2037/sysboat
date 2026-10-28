@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   container: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 8,
   },
   time: {
     fontSize: 50,

@@ -4,28 +4,19 @@ import {
     TextStyle,
     StyleSheet,
     TextProps,
-    PixelRatio,
     useColorScheme,
-    Platform,
 } from 'react-native';
-import { SCREEN_HEIGHT } from '@gorhom/bottom-sheet';
 
-
-const BASE_HEIGHT = 680;
-const scale = SCREEN_HEIGHT / BASE_HEIGHT;
-
-const sf = (dp: number): number =>
-    Math.round(PixelRatio.getFontScale() * dp * scale);
-
+// Fixed typography scale without artificial screen-height inflation or double-scaling
 const FONT_SIZES = {
-    xs: sf(10),
-    sm: sf(12),
-    md: sf(14),
-    lg: sf(16),
-    xl: sf(20),
-    '2xl': sf(24),
-    '3xl': sf(30),
-    '4xl': sf(36),
+    xs: 10,
+    sm: 12,
+    md: 14,
+    lg: 16,
+    xl: 18,
+    '2xl': 22,
+    '3xl': 26,
+    '4xl': 32,
 } as const;
 
 const FontWeights = {
@@ -43,8 +34,6 @@ const FontWeightsIOS = {
     SemiBold: 600,
     Bold: 700,
 } as const;
-
-
 
 const COLORS = {
     light: {
@@ -69,11 +58,22 @@ const COLORS = {
     },
 } as const;
 
-
 type SizeKey = keyof typeof FONT_SIZES;
 type ColorKey = keyof typeof COLORS.light;
+type FontKey = keyof typeof FontWeights;
+export type Weight = FontKey | 'light' | 'regular' | 'medium' | 'semibold' | 'bold';
 
-type Weight = keyof typeof FontWeights;
+const normalizeWeight = (w?: Weight | string): FontKey => {
+    if (!w) return 'Regular';
+    const lower = String(w).toLowerCase();
+    switch (lower) {
+        case 'light': return 'Light';
+        case 'medium': return 'Medium';
+        case 'semibold': return 'SemiBold';
+        case 'bold': return 'Bold';
+        default: return 'Regular';
+    }
+};
 
 export interface ThemedTextProps extends TextProps {
     size?: SizeKey;
@@ -92,16 +92,15 @@ export interface ThemedTextProps extends TextProps {
     children: React.ReactNode;
 }
 
-
 const ThemedText: React.FC<ThemedTextProps> = ({
     size = 'md',
     color = 'primary',
-    weight = 'regular',
+    weight = 'Regular',
     italic = false,
     underline = false,
     strikethrough = false,
     transform,
-    align = 'left',
+    align,
     letterSpacing = 0.4,
     lineHeightMultiplier,
     customColor,
@@ -111,7 +110,7 @@ const ThemedText: React.FC<ThemedTextProps> = ({
     children,
     ...rest
 }) => {
-    const defaultWeight: Weight = weight;
+    const defaultWeight: FontKey = normalizeWeight(weight as Weight);
     const scheme = useColorScheme() ?? 'light';
     const palette = COLORS[scheme];
 
@@ -127,7 +126,6 @@ const ThemedText: React.FC<ThemedTextProps> = ({
                     ? 'line-through'
                     : 'none';
 
-
     const dynamicStyle: TextStyle = {
         fontSize: resolvedSize,
         color: resolvedColor,
@@ -136,7 +134,7 @@ const ThemedText: React.FC<ThemedTextProps> = ({
         fontWeight: FontWeightsIOS[defaultWeight],
         textDecorationLine: decorationLines,
         textTransform: transform,
-        textAlign: align,
+        ...(align !== undefined && { textAlign: align }),
         ...(letterSpacing !== undefined && { letterSpacing }),
         ...(lineHeightMultiplier !== undefined && {
             lineHeight: resolvedSize * lineHeightMultiplier,
@@ -145,6 +143,7 @@ const ThemedText: React.FC<ThemedTextProps> = ({
 
     return (
         <Text
+            allowFontScaling={false}
             style={[styles.base, dynamicStyle, style]}
             numberOfLines={lines}
             {...rest}
