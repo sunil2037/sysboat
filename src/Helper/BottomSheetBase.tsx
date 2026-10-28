@@ -22,8 +22,9 @@ import {
   BottomSheetBackdropProps,
   useBottomSheetTimingConfigs,
 } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Easing } from 'react-native-reanimated';
-import { bottomHeight, STATUS_BAR_HEIGHT } from './Helper';
+import { STATUS_BAR_HEIGHT } from './Helper';
 
 interface BottomSheetBaseProps {
   header?: React.ReactNode;
@@ -58,6 +59,10 @@ const BottomSheetBase: React.FC<BottomSheetBaseProps> = ({
   keyboardBehavior = Platform.OS === 'ios' ? 'padding' : 'height',
   freeze = false,
 }) => {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Platform.OS === 'android'
+    ? (insets.bottom === 0 ? 30 : insets.bottom)
+    : insets.bottom;
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [kbVisible, setKbVisible] = useState(false);
   const isPresentedRef = useRef(false);
@@ -91,8 +96,8 @@ const BottomSheetBase: React.FC<BottomSheetBaseProps> = ({
     [backgroundStyle],
   );
   const mergedContentContainerStyle = useMemo(
-    () => [styles.contentContainer, contentContainerStyle, { paddingBottom: bottomHeight() }],
-    [contentContainerStyle],
+    () => [styles.contentContainer, contentContainerStyle, { paddingBottom: bottomInset }],
+    [contentContainerStyle, bottomInset],
   );
 
   const handleSheetChanges = useCallback(
@@ -188,8 +193,8 @@ const BottomSheetBase: React.FC<BottomSheetBaseProps> = ({
       {header ? header : null}
 
       <ContainerComponent
-        contentContainerStyle={[mergedContentContainerStyle, { paddingBottom: bottomHeight() }]}
-        style={[styles.containerComponent, { paddingBottom: bottomHeight() }]}
+        contentContainerStyle={mergedContentContainerStyle}
+        style={[styles.containerComponent, { paddingBottom: bottomInset }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

@@ -70,6 +70,12 @@ import { useLocation } from '../IOS/LocationModule';
 import Skeleton from '../Helper/Skeleton';
 import BirthdayWishCard from '../components/BirthdayWishCard';
 import ThemedText, { Caption } from '../Helper/ThemedText';
+import PunchConfirmationSheet from '../components/PunchConfirmationSheet';
+import { getPunchVerificationMode } from './punchVerificationPolicy';
+import {
+  getPunchAction,
+  getPunchConfirmationDecision,
+} from './attendanceValidation';
 
 const HomeScreen = ({ navigation }) => {
   const { IOSLocation, loading, error, getLocation } = useLocation();
@@ -110,6 +116,7 @@ const HomeScreen = ({ navigation }) => {
     setCheckOutTimeAuth,
     refetchProfile,
     profileDataLoading,
+    profileData,
     permissions
   } = useAuth();
 
@@ -124,6 +131,7 @@ const HomeScreen = ({ navigation }) => {
 
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadModalAction, setUploadModalAction] = useState(null);
+  const [showPunchConfirmation, setShowPunchConfirmation] = useState(false);
   const [isFront, setIsFront] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
 
@@ -133,6 +141,7 @@ const HomeScreen = ({ navigation }) => {
     reload: false,
   });
   const attendanceUpdateLock = useRef(false);
+  const punchConfirmationLock = useRef(false);
   const [attendanceData, setAttendanceData] = useState({
     inTime: '',
     checkOutTime: '',
@@ -244,6 +253,12 @@ const HomeScreen = ({ navigation }) => {
       }),
     enabled: !!userdata,
   });
+
+  const punchVerificationMode = getPunchVerificationMode(
+    profileData,
+    profileDataLoading || profileDataLoadings,
+  );
+  const punchAction = getPunchAction(attendanceData);
 
   const profileImageUri = useMemo(() => {
     return GetEmployeesProfileData?.data[0]?.profile_image
@@ -536,36 +551,42 @@ const HomeScreen = ({ navigation }) => {
 
   const handleClockIn = useCallback(async () => {
     Vibration.vibrate(100);
-    if (permissions?.block_punch_in_out) {
+    const decision = getPunchConfirmationDecision({
+      ...attendanceData,
+      verificationMode: punchVerificationMode,
+      faceAuthenticated,
+      blocked: permissions?.block_punch_in_out,
+    });
+
+    if (decision === 'blocked') {
       toast.info(TOAST_MESSAGES.block_punch_in_out);
       return;
-    } else {
-      if (GetEmployeesProfileData?.permission?.face_detection) {
-        if (!faceAuthenticated) {
-          comingFromUploadRef.current = true;
-          setUploadModalAction('clockin');
-          setShowUploadModal(true);
-        } else if (!attendanceData.inTime && !attendanceData.checkOutTime) {
-          await checkIn();
-          setFaceAuthenticated(false);
-        } else if (attendanceData.inTime && !attendanceData.checkOutTime) {
-          await checkOut();
-          setFaceAuthenticated(false);
-        } else {
-          toast.error('Access Denied!');
-        }
-      } else {
-        if (!attendanceData.inTime && !attendanceData.checkOutTime) {
-          await checkIn();
-        } else if (attendanceData.inTime && !attendanceData.checkOutTime) {
-          await checkOut();
-        } else {
-          toast.error('Access Denied!');
-        }
-      }
+    }
+    if (decision === 'profile_loading') {
+      toast.info('Loading your profile. Please try again in a moment.');
+      return;
+    }
+    if (decision === 'profile_unavailable') {
+      toast.error('Could not confirm your face verification settings. Please retry.');
+      return;
+    }
+    if (decision === 'verify_face') {
+      comingFromUploadRef.current = true;
+      setUploadModalAction('clockin');
+      setShowUploadModal(true);
+      return;
+    }
+    if (decision === 'clock_in') {
+      await checkIn();
+      setFaceAuthenticated(false);
+    } else if (decision === 'clock_out') {
+      await checkOut();
+      setFaceAuthenticated(false);
+    } else if (decision === 'no_action') {
+      toast.error('Access Denied!');
     }
   }, [
-    GetEmployeesProfileData?.permission?.face_detection,
+    punchVerificationMode,
     faceAuthenticated,
     attendanceData.inTime,
     attendanceData.checkOutTime,
@@ -575,6 +596,17 @@ const HomeScreen = ({ navigation }) => {
     authToken,
 
   ]);
+
+  const confirmPunch = useCallback(async () => {
+    if (punchConfirmationLock.current) return;
+    punchConfirmationLock.current = true;
+    setShowPunchConfirmation(false);
+    try {
+      await handleClockIn();
+    } finally {
+      punchConfirmationLock.current = false;
+    }
+  }, [handleClockIn]);
 
   const breakInAction = useCallback(async () => {
     try {
@@ -857,34 +889,34 @@ const HomeScreen = ({ navigation }) => {
   });
 
   const renderProfileSection = () => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 8 }}>
       <TouchableOpacity
         onPress={() => navigation.navigate('ProfileStack')}
         disabled={permissions?.hide_profile_tab == 1}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
         <Image
-          style={{ width: 50, height: 50, borderRadius: 50 }}
+          style={{ width: 40, height: 40, borderRadius: 20 }}
           source={{ uri: profileImageUri }}
           resizeMode={'cover'}
           onError={() => { }}
         />
-        <View>
-          <ThemedText size='lg' weight='Medium'>
+        <View style={{ flex: 1 }}>
+          <ThemedText size='md' weight='SemiBold' numberOfLines={1}>
             {capitalizeFirstLetter(
               StringLengthLimit(
-                GetEmployeesProfileData?.data[0]?.full_name ||
+                GetEmployeesProfileData?.data?.[0]?.full_name ||
                 'Sysboat',
-                15
+                18
               )
             )}
           </ThemedText>
-          <ThemedText size='xs' weight='Regular' color='secondary' >
+          <ThemedText size='xs' weight='Regular' color='secondary' numberOfLines={1}>
             {capitalizeFirstLetter(
               StringLengthLimit(
-                GetEmployeesProfileData?.data[0]?.official_email_id ||
-                GetEmployeesProfileData?.data[0]?.email_id ||
-                'admin@gmail.com',
-                25
+                GetEmployeesProfileData?.data?.[0]?.official_email_id ||
+                GetEmployeesProfileData?.data?.[0]?.email_id ||
+                '--',
+                28
               )
             )}
           </ThemedText>
@@ -894,30 +926,32 @@ const HomeScreen = ({ navigation }) => {
   );
 
   const renderActionButtons = () => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
       <TouchableOpacity
         disabled={loadingStates.reload}
-        onPress={handleReloadHome}>
+        onPress={handleReloadHome}
+        style={{ padding: 6, justifyContent: 'center', alignItems: 'center' }}>
         {loadingStates.reload ? (
-          <ActivityIndicator color={'#CA282C'} size={30} />
+          <ActivityIndicator color={'#CA282C'} size={18} />
         ) : (
-          <ReloadIcon width={30} height={30} color={'#CA282C'} />
+          <ReloadIcon width={20} height={20} color={'#CA282C'} />
         )}
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => navigation.navigate('NotificationScreen')}>
-        <Notification2 width={35} height={35} color={'#CA282C'} />
+        onPress={() => navigation.navigate('NotificationScreen')}
+        style={{ padding: 6, justifyContent: 'center', alignItems: 'center' }}>
+        <Notification2 width={22} height={22} color={'#CA282C'} />
         {isNotification && (
           <View
             style={{
-              width: 10,
-              height: 10,
-              borderRadius: 50,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
               backgroundColor: '#E89C1E',
               position: 'absolute',
-              top: 5,
-              right: 5,
+              top: 3,
+              right: 3,
             }}
           />
         )}
@@ -934,11 +968,21 @@ const HomeScreen = ({ navigation }) => {
       }}>
       <TouchableOpacity
         disabled={
+          !punchAction ||
           attendanceData.duration !== '' ||
           uiState.blockPunchOut ||
-          loadingStates.clockIn
+          loadingStates.clockIn ||
+          fetchAttendanceDataLoading ||
+          profileDataLoadings ||
+          profileDataLoading
         }
-        onLongPress={handleClockIn}
+        onPress={() => setShowPunchConfirmation(true)}
+        accessibilityRole="button"
+        accessibilityLabel={
+          punchAction === 'out'
+            ? 'Punch out'
+            : 'Punch in'
+        }
         style={{
           justifyContent: 'center',
           alignItems: 'center',
@@ -1008,7 +1052,7 @@ const HomeScreen = ({ navigation }) => {
             locations={[0.2, 0.6]}
           />
 
-          {attendanceData.inTime && fetchAttendanceDataLoading === false && (
+          {Boolean(attendanceData.inTime) && fetchAttendanceDataLoading === false && (
             <CircularProgress
               message={message =>
                 setUiState(prev => ({
@@ -1063,7 +1107,7 @@ const HomeScreen = ({ navigation }) => {
               <ActivityIndicator size={50} color={'#6A7D94'} />
             ) : (
               <>
-                {breakData.endBreakTime &&
+                {Boolean(breakData.endBreakTime) &&
                   breakData.endBreakTime !== '00:00:00' &&
                   (breakData.breakTime || breakData.breakTime === '') && (
                     <>
@@ -1077,7 +1121,7 @@ const HomeScreen = ({ navigation }) => {
                       </ThemedText>
                     </>
                   )}
-                {breakData.breakTime &&
+                {Boolean(breakData.breakTime) &&
                   breakData.breakTime !== '' &&
                   (breakData.endBreakTime === '' ||
                     breakData.endBreakTime === '00:00:00') && (
@@ -1229,6 +1273,16 @@ const HomeScreen = ({ navigation }) => {
           navigation={navigation}
         />
 
+        {showPunchConfirmation && (
+          <PunchConfirmationSheet
+            visible
+            onCancel={() => setShowPunchConfirmation(false)}
+            action={punchAction}
+            currentTime={moment().format('hh:mm A')}
+            onConfirm={confirmPunch}
+          />
+        )}
+
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, paddingBottom: 0, gap: 20 }}>
             <View
@@ -1276,7 +1330,7 @@ const HomeScreen = ({ navigation }) => {
                     {renderBackCard()}
                   </Animated.View>
 
-                  {uiState.message && (
+                  {Boolean(uiState.message) && (
                     <View
                       style={{
                         justifyContent: 'center',

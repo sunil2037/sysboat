@@ -53,23 +53,32 @@ export default function UploadScreen({ visible, onClose, onSuccessAction, naviga
     const statusBarHeight = StatusBar.currentHeight;
 
     useEffect(() => {
+        if (!visible) {
+            return undefined;
+        }
+
+        let active = true;
         const checkPermission = async () => {
-            const result = await check(
-                Platform.OS === 'ios'
+            try {
+                const permission = Platform.OS === 'ios'
                     ? PERMISSIONS.IOS.CAMERA
-                    : PERMISSIONS.ANDROID.CAMERA,
-            );
-            setCameraPermission(result);
-            if (result !== RESULTS.GRANTED) {
-                const req = await request(
-                    Platform.OS === 'ios'
-                        ? PERMISSIONS.IOS.CAMERA
-                        : PERMISSIONS.ANDROID.CAMERA,
-                );
-                setCameraPermission(req);
+                    : PERMISSIONS.ANDROID.CAMERA;
+                const result = await check(permission);
+                if (!active) return;
+                setCameraPermission(result);
+                if (result !== RESULTS.GRANTED) {
+                    const requestedResult = await request(permission);
+                    if (active) setCameraPermission(requestedResult);
+                }
+            } catch (error) {
+                if (active) setCameraPermission(RESULTS.UNAVAILABLE);
             }
         };
+        setCameraPermission(null);
         checkPermission();
+        return () => {
+            active = false;
+        };
     }, [visible]);
 
     const { data, isError, isFetching, isLoading, refetch } = useQuery({

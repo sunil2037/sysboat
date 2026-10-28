@@ -31,6 +31,10 @@ import { useAuth } from '../../Context/AuthContext';
 import { toast } from '../../Helper/ToastManager';
 import useUploadFile from '../../hooks/useUploadFile';
 import ThemedText from '../../Helper/ThemedText';
+import {
+  resolveFaceUploadPath,
+  toFaceImageFile,
+} from './faceUploadValidation';
 
 const FaceRecognitionScreen = () => {
   const navigation = useNavigation();
@@ -91,19 +95,15 @@ const FaceRecognitionScreen = () => {
   const requestPermissions = async () => {
     if (Platform.OS === 'android') {
       try {
-        const granted = await PermissionsAndroid.requestMultiple([
+        const cameraStatus = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.CAMERA,
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-        ]);
-
-        const allGranted = Object.values(granted).every(
-          status => status === PermissionsAndroid.RESULTS.GRANTED
         );
 
-        if (allGranted) {
+        if (cameraStatus === PermissionsAndroid.RESULTS.GRANTED) {
           const cameraStarted = await FaceRecognition.startCamera();
           setHasPermission(cameraStarted);
+        } else {
+          setHasPermission(false);
         }
       } catch (err) {
         console.warn(err);
@@ -139,13 +139,10 @@ const FaceRecognitionScreen = () => {
       });
 
       if (result?.assets?.[0]?.uri) {
-        const imageUri = result.assets[0].uri;
+        const imageFile = toFaceImageFile(result.assets[0]);
+        const imageUri = imageFile.uri;
         setSelectedImage(imageUri);
-        setSelectedFile({
-          uri: imageUri,
-          type: result.assets[0].type || 'image/jpeg',
-          name: result.assets[0].fileName || `face_${Date.now()}.jpg`,
-        });
+        setSelectedFile(imageFile);
         setShowBottomSheet(false);
         setCloudUploadComplete(false);
         setUploadedCloudPath('');
@@ -163,14 +160,16 @@ const FaceRecognitionScreen = () => {
         quality: 1,
       });
 
+      if (result?.didCancel) return;
+      if (result?.errorCode) {
+        throw new Error(result.errorMessage || 'Failed to choose an image');
+      }
+
       if (result?.assets?.[0]?.uri) {
-        const imageUri = result.assets[0].uri;
+        const imageFile = toFaceImageFile(result.assets[0]);
+        const imageUri = imageFile.uri;
         setSelectedImage(imageUri);
-        setSelectedFile({
-          uri: imageUri,
-          type: result.assets[0].type || 'image/jpeg',
-          name: result.assets[0].fileName || `face_${Date.now()}.jpg`,
-        });
+        setSelectedFile(imageFile);
         setShowBottomSheet(false);
         setCloudUploadComplete(false);
         setUploadedCloudPath('');
@@ -241,8 +240,15 @@ const FaceRecognitionScreen = () => {
       { file: selectedFile, folder },
       {
         onSuccess: async (data) => {
+          const cloudPath = resolveFaceUploadPath(data);
+          if (!cloudPath) {
+            toast.error('The upload response did not include an image path. Please retry.');
+            setIsUploadingToCloud(false);
+            setShowUploadProgress(false);
+            return;
+          }
           toast.success('Face image uploaded to cloud successfully!');
-          setUploadedCloudPath(data?.url || data?.file_path);
+          setUploadedCloudPath(cloudPath);
           setCloudUploadComplete(true);
           setIsUploadingToCloud(false);
           setUploadProgress(1);
@@ -305,14 +311,18 @@ const FaceRecognitionScreen = () => {
   };
 
   const onFaceCaptured = (data) => {
-    setSelectedImage(data?.previewImage);
-    setEmbedding(data?.embedding);
-
-    setSelectedFile({
+    const imageFile = toFaceImageFile({
       uri: data?.previewImage,
       type: 'image/jpeg',
-      name: `face_capture_${Date.now()}.jpg`,
+      fileName: `face_capture_${Date.now()}.jpg`,
     });
+    if (!imageFile) {
+      toast.error('Could not load the captured image. Please capture again.');
+      return;
+    }
+    setSelectedImage(imageFile.uri);
+    setEmbedding(data?.embedding);
+    setSelectedFile(imageFile);
 
     setCloudUploadComplete(false);
     setUploadedCloudPath('');
@@ -331,24 +341,6 @@ const FaceRecognitionScreen = () => {
       DeleteFace(payload)
     }
 
-  }
-
-  if (!hasPermission) {
-    return (
-      <View style={{ flex: 1, paddingTop: STATUS_BAR_HEIGHT() }}>
-        <TopNavBar navigation={navigation} title={'Face Management'} />
-        <View style={{ justifyContent: 'center', alignItems: 'center', flex: 1, gap: 20, marginBottom: bottomHeight() }}>
-          <ThemedText size='md' weight='Medium' align='center'>
-            Please grant camera and storage permissions
-          </ThemedText>
-          <TouchableOpacity style={{ backgroundColor: '#CA282C', paddingHorizontal: 25, paddingVertical: 12, borderRadius: 100, }} onPress={requestPermissions}>
-            <ThemedText size='sm' weight='Regular' color='inverse' >
-              Request Permissions
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
   }
 
   return (
@@ -455,14 +447,35 @@ const FaceRecognitionScreen = () => {
         )}
 
         <View style={styles.mainActions}>
+          {!hasPermission && (
+            <View style={styles.cameraPermissionNotice}>
+              <ThemedText size='xs' weight='Regular' color='secondary' align='center'>
+                Camera access is off. You can choose an image from your gallery or enable camera access.
+              </ThemedText>
+              <TouchableOpacity onPress={requestPermissions}>
+                <ThemedText size='sm' weight='Medium' color='error' align='center'>
+                  Enable camera
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
           <TouchableOpacity
-            style={[styles.primaryButton, isRecognizing && styles.buttonDisabled]}
+            style={[styles.primaryButton, !hasPermission && styles.buttonDisabled]}
             onPress={() => setShowCamera(true)}
+            disabled={!hasPermission}
           >
             <ThemedText size='sm' weight='Medium' color='inverse' >
-              {isRecognizing ? 'Processing...' : 'Capture Face'}
+              Capture Face
             </ThemedText>
 
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={handlePickImage}
+            disabled={isUploadingToCloud}
+          >
+            <ThemedText size='sm' weight='Medium' color='error'>Choose from gallery</ThemedText>
           </TouchableOpacity>
 
 
@@ -559,6 +572,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   mainActions: { marginTop: 20, gap: 12 },
+  cameraPermissionNotice: {
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#FFF2F2',
+  },
   primaryButton: {
     backgroundColor: '#CA282C',
     paddingVertical: 14,

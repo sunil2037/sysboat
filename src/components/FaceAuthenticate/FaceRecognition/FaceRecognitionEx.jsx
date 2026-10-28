@@ -23,6 +23,10 @@ import { Cross, ReloadIcon } from '../../../Helper/IconsLoad';
 import { API_BASE_URL2 } from '../../../Apis/Services/ServerURL';
 import backgroundImage from '../../../../assets/Icon/background.png';
 import ThemedText from '../../../Helper/ThemedText';
+import {
+  getFaceRecognitionMode,
+  parseFaceEmbeddings,
+} from '../../../screens/attendanceValidation';
 
 
 const COMPONENT_NAME = 'FaceRecognitionCameraViews';
@@ -56,8 +60,7 @@ const ACTION_TYPES = {
 
 export default function FaceRecognitionEx({ onFaceRecognized, navigation }) {
   const cameraRef = useRef(null);
-  const { profileData } = useAuth();
-  const parsedEmbeddings = profileData && JSON.parse(profileData?.embeddings || '{}');
+  const { profileData, profileDataLoading } = useAuth();
   const name = profileData?.data?.[0]?.first_name;
   const [refresh, setRefresh] = useState(false);
   const { userdata } = useEncodedUserData();
@@ -65,8 +68,8 @@ export default function FaceRecognitionEx({ onFaceRecognized, navigation }) {
 
   const faceDetection = profileData?.permission?.face_detection;
   const liveFace = profileData?.permission?.live_face_detection;
-
-console.log("profileDataprofileData",profileData)
+  const recognitionMode = getFaceRecognitionMode(faceDetection, liveFace);
+  const parsedEmbeddings = parseFaceEmbeddings(profileData?.embeddings);
 
   const {
     data: FaceDetailsData,
@@ -126,7 +129,11 @@ console.log("profileDataprofileData",profileData)
     setRefresh(true);
     ToastAndroid.show('Refreshing...', ToastAndroid.SHORT);
     try {
-      if (faceDetection == 1 && liveFace == false) {
+      if (recognitionMode === 'offline') {
+        if (!name || !parsedEmbeddings) {
+          ToastAndroid.show('Face data is incomplete. Please register your face again.', ToastAndroid.SHORT);
+          return;
+        }
         sendCommand(cameraRef, 'addEmbedding', [name, parsedEmbeddings]);
         sendCommand(cameraRef, 'save', []);
         ToastAndroid.show(`${name}'s embedding updated successfully.`, ToastAndroid.SHORT);
@@ -142,6 +149,14 @@ console.log("profileDataprofileData",profileData)
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 15 }}>
+      {profileDataLoading || !profileData ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#6A7D94" />
+          <Text style={{ marginTop: 12, fontFamily: 'Poppins-Medium' }}>
+            Loading your profile…
+          </Text>
+        </View>
+      ) : <>
       {profileData?.isFaceRegistered && (
         <TouchableOpacity disabled={refresh} onPress={handleRefreshFace} style={{ position: 'absolute', top: -STATUS_BAR_HEIGHT(), right: 25 }}>
           {refresh ? (
@@ -162,12 +177,13 @@ console.log("profileDataprofileData",profileData)
           </View>
         </View>
       ) : (
-        faceDetection == 1 && liveFace == false ? (
+        recognitionMode === 'offline' ? (
           <FaceRecognitionOfflineComponent cameraRef={cameraRef} onFaceRecognized={onFaceRecognized} />
         ) : (
           <LiveRecognitionComponent cameraRef={cameraRef} FaceDetailsData={FaceDetailsData} isLoading={isLoading || isPending} />
         )
       )}
+      </>}
 
     </View>
   )
@@ -176,8 +192,8 @@ console.log("profileDataprofileData",profileData)
 
 const FaceRecognitionOfflineComponent = ({ cameraRef, onFaceRecognized }) => {
   const { profileData } = useAuth();
-  const parsedEmbeddings = profileData && JSON.parse(profileData?.embeddings);
-  const name = profileData?.data[0]?.first_name;
+  const parsedEmbeddings = parseFaceEmbeddings(profileData?.embeddings);
+  const name = profileData?.data?.[0]?.first_name;
 
 
   const handleFaceRecognized = useCallback((event) => {
@@ -186,13 +202,13 @@ const FaceRecognitionOfflineComponent = ({ cameraRef, onFaceRecognized }) => {
     } else {
       // onFaceRecognized(false);
     }
-  }, []);
+  }, [onFaceRecognized]);
 
 
   const handleEnrollAllFacesOptimized = async () => {
     try {
       if (!name || !parsedEmbeddings) {
-        console.warn(`Skipping - missing data for employee: ${id}`);
+        console.warn('Skipping face enrollment because profile data is incomplete.');
         return false;
       }
 

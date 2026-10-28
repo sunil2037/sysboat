@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   ImageBackground,
   RefreshControl,
-  Dimensions,
   ToastAndroid,
   StyleSheet,
   Modal,
@@ -51,8 +50,9 @@ import { capitalizeFirstLetter } from '../Helper/StringHelpers';
 import { useLogout } from '../components/Logout';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BOTTOM_TAB_HEIGHT, bottomHeight, getFontSize, STATUS_BAR_HEIGHT, } from '../Helper/Helper';
-import { Popup, LogoutLoadingPopup } from '../Helper/Popup';
+import { BOTTOM_TAB_HEIGHT, bottomHeight } from '../Helper/Helper';
+import { LogoutLoadingPopup } from '../Helper/Popup';
+import BottomSheetBase from '../Helper/BottomSheetBase';
 import Skeleton from '../Helper/Skeleton';
 import ThemedText from '../Helper/ThemedText';
 
@@ -120,8 +120,8 @@ const Profile = ({ navigation }) => {
     },
   });
 
-  const profileImageUri = GetEmployeesProfileData?.data[0]?.profile_image
-    ? API_BASE_URL2 + GetEmployeesProfileData?.data[0]?.profile_image
+  const profileImageUri = GetEmployeesProfileData?.data?.[0]?.profile_image
+    ? API_BASE_URL2 + GetEmployeesProfileData?.data?.[0]?.profile_image
     : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 
 
@@ -186,35 +186,36 @@ const Profile = ({ navigation }) => {
 
   const images = [{ url: profileImageUri }];
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      {/* <DocumentUploadComponent /> */}
-      <BottomSheetProfileImage
-        IsPending={isImageUploadPending || isFetching}
-        onImageSelect={handleImageSelect}
-        onImageDelete={handleImageDelete}
-        data={GetEmployeesProfileData?.data[0]}
-        visible={showSheet}
-        isDeletingStatus={isDeleting}
-        error={isImageUploadError}
-        onClose={() => {
-          setShowSheet(false);
-        }}
-      />
-
+    <View style={{ flex: 1 }}>
       <ImageBackground
         source={backgroundImage}
         resizeMode="cover"
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          flex: 1,
-          paddingHorizontal: 20,
-          paddingBottom: BOTTOM_TAB_HEIGHT + 30,
-          paddingTop: STATUS_BAR_HEIGHT()
-        }}>
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      />
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* <DocumentUploadComponent /> */}
+        <BottomSheetProfileImage
+          IsPending={isImageUploadPending || isFetching}
+          onImageSelect={handleImageSelect}
+          onImageDelete={handleImageDelete}
+          data={GetEmployeesProfileData?.data?.[0]}
+          visible={showSheet}
+          isDeletingStatus={isDeleting}
+          error={isImageUploadError}
+          onClose={() => {
+            setShowSheet(false);
+          }}
+        />
+
         <ScrollView
-          style={{ flex: 1 }}
+          style={{ flex: 1, paddingHorizontal: 16 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: STATUS_BAR_HEIGHT() }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingTop: 60,
+            paddingBottom: BOTTOM_TAB_HEIGHT + 20,
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -222,18 +223,56 @@ const Profile = ({ navigation }) => {
               colors={['black']}
             />
           }>
-          <View style={{ flex: 1, gap: 50 }}>
+          <View style={{ gap: 24 }}>
             <View style={{ alignItems: 'center', gap: 5 }}>
               <LogoutLoadingPopup isVisible={showLoadingBarOfLogout} />
-              <Popup
-                isVisible={isLogoutPopupVisible}
-                message={'Are you sure you want to logout?'}
-                onConfirm={handleLogoutConfirm}
-                onCancel={hideLogoutPopup}
-              />
+              <BottomSheetBase
+                visible={isLogoutPopupVisible}
+                onClose={hideLogoutPopup}
+                snapPoints={['40%']}
+                isScrollView={false}>
+                <View style={styles.logoutSheetContent}>
+                  <View style={styles.logoutSheetIconContainer}>
+                    <AlertIcon width={32} height={32} color="#CA282C" />
+                  </View>
+
+                  <ThemedText size="xl" weight="SemiBold" align="center" style={{ marginTop: 12 }}>
+                    Log Out
+                  </ThemedText>
+
+                  <ThemedText
+                    size="sm"
+                    weight="Regular"
+                    color="secondary"
+                    align="center"
+                    style={{ marginTop: 6, paddingHorizontal: 20, lineHeight: 20 }}>
+                    Are you sure you want to log out? You will need to sign in again to access your account.
+                  </ThemedText>
+
+                  <View style={styles.logoutSheetBtnContainer}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.logoutConfirmBtn}
+                      onPress={handleLogoutConfirm}>
+                      <ThemedText customSize={15} weight="SemiBold" color="inverse">
+                        Yes, Log Out
+                      </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.logoutCancelBtn}
+                      onPress={hideLogoutPopup}>
+                      <ThemedText customSize={15} weight="Medium" color="secondary">
+                        Cancel
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </BottomSheetBase>
 
               <Skeleton highlightColor={'#f5f5f5'} boneColor='#fff' animationType='pulse' isLoading={isFetching || isImageUploadPending || profileDataLoading} layout={[
-                { key: "Profile-1", width: 120, height: 120, marginBottom: 15, borderRadius: 120, alignSelf: 'center' },
+                { key: "Profile-1", width: 96, height: 96, marginBottom: 10, borderRadius: 96, alignSelf: 'center' },
                 { key: "Profile-2", width: 180, height: 30, marginBottom: 10, borderRadius: 120, alignSelf: 'center' },
                 { key: "Profile-3", width: 180, height: 20, marginBottom: 6, borderRadius: 120, alignSelf: 'center' },
               ]}
@@ -243,16 +282,16 @@ const Profile = ({ navigation }) => {
                     setIsVisible(true);
                   }}
                   style={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: 120,
+                    width: 96,
+                    height: 96,
+                    borderRadius: 96,
                     backgroundColor: 'white'
                   }}>
                   <Image
                     style={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: 120,
+                      width: 96,
+                      height: 96,
+                      borderRadius: 96,
                     }}
                     source={{
                       uri: imageUri || profileImageUri,
@@ -284,14 +323,14 @@ const Profile = ({ navigation }) => {
                     </TouchableOpacity>
                   )}
                 </TouchableOpacity>
-                <ThemedText size='2xl' weight='Medium' align='center'>
-                  {GetEmployeesProfileData?.data[0]?.first_name || 'John Doe'}
+                <ThemedText customSize={20} weight='Medium' align='center'>
+                  {GetEmployeesProfileData?.data?.[0]?.first_name || 'John Doe'}
                 </ThemedText>
-                <ThemedText size='sm' weight='Regular' align='center' color='secondary'>
+                <ThemedText customSize={12} weight='Regular' align='center' color='secondary'>
                   {capitalizeFirstLetter(
-                    GetEmployeesProfileData?.data[0]?.official_email_id
-                      ? GetEmployeesProfileData?.data[0]?.official_email_id
-                      : GetEmployeesProfileData?.data[0]?.email_id || '',
+                    GetEmployeesProfileData?.data?.[0]?.official_email_id
+                      ? GetEmployeesProfileData?.data?.[0]?.official_email_id
+                      : GetEmployeesProfileData?.data?.[0]?.email_id || '',
                   )}
                 </ThemedText>
               </Skeleton>
@@ -301,8 +340,8 @@ const Profile = ({ navigation }) => {
               <View
                 style={{
                   backgroundColor: '#F7F7F7',
-                  padding: 15,
-                  borderRadius: 25,
+                  padding: 12,
+                  borderRadius: 20,
                 }}>
                 <Pressable
                   onPress={() => {
@@ -314,15 +353,15 @@ const Profile = ({ navigation }) => {
                     justifyContent: 'space-between',
                     borderBottomWidth: 1,
                     borderColor: '#DCD7C9',
-                    paddingBottom: 15,
-                    paddingTop: 15,
+                    paddingBottom: 11,
+                    paddingTop: 11,
                   }}>
                   <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                    <PersonalInfoIcon width={25} height={25} />
-                    <ThemedText size='md' weight='Regular'  >Personal</ThemedText>
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <PersonalInfoIcon width={22} height={22} />
+                    <ThemedText customSize={14} weight='Regular'>Personal</ThemedText>
                   </View>
-                  <RightIcon width={25} height={25} />
+                  <RightIcon width={22} height={22} />
                 </Pressable>
                 <Pressable
                   onPress={() => {
@@ -334,15 +373,15 @@ const Profile = ({ navigation }) => {
                     justifyContent: 'space-between',
                     borderBottomWidth: 1,
                     borderColor: '#DCD7C9',
-                    paddingBottom: 15,
-                    paddingTop: 15,
+                    paddingBottom: 11,
+                    paddingTop: 11,
                   }}>
                   <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                    <WorkInfo width={30} height={30} />
-                    <ThemedText size='md' weight='Regular'>Work</ThemedText>
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <WorkInfo width={24} height={24} />
+                    <ThemedText customSize={14} weight='Regular'>Work</ThemedText>
                   </View>
-                  <RightIcon width={25} height={25} />
+                  <RightIcon width={22} height={22} />
                 </Pressable>
                 <Pressable
                   onPress={() => {
@@ -359,17 +398,17 @@ const Profile = ({ navigation }) => {
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingBottom: 10,
-                    paddingTop: 15,
+                    paddingBottom: 11,
+                    paddingTop: 11,
                     borderBottomWidth: 1,
                     borderColor: '#DCD7C9',
                   }}>
                   <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                    <WorkWeek width={30} height={30} />
-                    <ThemedText size='md' weight='Regular'>Work-Week</ThemedText>
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <WorkWeek width={24} height={24} />
+                    <ThemedText customSize={14} weight='Regular'>Work-Week</ThemedText>
                   </View>
-                  <RightIcon width={25} height={25} />
+                  <RightIcon width={22} height={22} />
                 </Pressable>
 
                 {/* {(userType == 'admin' || userType == 'ceo' || userType == 'company_admin' || userType == 'hr') && ( */}
@@ -381,72 +420,38 @@ const Profile = ({ navigation }) => {
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingBottom: 10,
-                    paddingTop: 15,
+                    paddingBottom: 11,
+                    paddingTop: 11,
                   }}>
                   <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                    <DocumentsIcon width={25} height={25} />
-                    <ThemedText size='md' weight='Regular'>Documents</ThemedText>
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <DocumentsIcon width={22} height={22} />
+                    <ThemedText customSize={14} weight='Regular'>Documents</ThemedText>
                   </View>
-                  <RightIcon width={25} height={25} />
+                  <RightIcon width={22} height={22} />
                 </Pressable>
                 {/* )} */}
               </View>
-              {profileData?.permission?.branch_switch && <BranchSwitch />}
-              <View
-                style={{
-                  backgroundColor: '#F7F7F7',
-                  padding: 15,
-                  borderRadius: 25,
-                }}>
-                {/* <Pressable
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingBottom: 15,
-                  paddingTop: 15,
-                  borderBottomWidth: 1,
-                  borderColor: '#DCD7C9',
-                }}>
-                <View
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                  <Notification2 width={25} height={25}></Notification2>
-                  <Text
-                    style={{
-                      fontFamily: 'Poppins-Regular',
-                      fontSize: 16,
-                      lineHeight: 20,
-                    }}>
-                    Push Notification
-                  </Text>
-                </View>
-                <Switch
-                  trackColor={{ false: '#B2A5FF', true: '#B2A5FF' }}
-                  thumbColor={isEnabled ? '#493D9E' : '#493D9E'}
-                  ios_backgroundColor="#3e3e3e"
-                  style={{ transform: [{ scaleX: 1.2 }, { scaleY: 1.2 }] }}
-                  onValueChange={toggleSwitch}
-                  value={isEnabled}
-                />
-              </Pressable> */}
-                <TouchableOpacity
-                  onPress={showLogoutPopup}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingBottom: 10,
-                    paddingTop: 15,
-                  }}>
-                  <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                    <LogoutIcon width={25} height={25} />
-                    <ThemedText size='md' weight='Regular'>Log Out</ThemedText>
+              {Boolean(profileData?.permission?.branch_switch) && <BranchSwitch />}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={showLogoutPopup}
+                style={styles.attractiveLogoutCard}>
+                <View style={styles.attractiveLogoutLeft}>
+                  <View style={styles.attractiveLogoutIconBadge}>
+                    <LogoutIcon width={20} height={20} />
                   </View>
-                </TouchableOpacity>
-              </View>
+                  <View style={{ gap: 2 }}>
+                    <ThemedText customSize={15} weight="SemiBold" customColor="#CA282C">
+                      Log Out
+                    </ThemedText>
+                    <ThemedText customSize={11} weight="Regular" color="muted">
+                      Sign out of your account
+                    </ThemedText>
+                  </View>
+                </View>
+                <RightIcon width={18} height={18} color="#CA282C" />
+              </TouchableOpacity>
             </View>
 
           </View>
@@ -472,30 +477,30 @@ const Profile = ({ navigation }) => {
             </View>
           </View> */}
         </ScrollView>
-      </ImageBackground>
-      {visible && (
-        <Modal
-          visible={visible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setIsVisible(false)}>
-          <ImageViewer
-            enablePreload={true}
-            index={0}
-            renderIndicator={() => null}
-            imageUrls={images}
-            enableSwipeDown={false}
-            enableImageZoom={true}
-            saveToLocalByLongPress={true}
-          />
-          <View style={{ position: 'absolute', bottom: bottomHeight(), alignSelf: 'center' }}>
-            <TouchableOpacity onPress={() => setIsVisible(false)} style={{ paddingHorizontal: 20, paddingVertical: 15, borderRadius: 50, backgroundColor: '#CA282C' }}>
-              <ThemedText size='md' weight='Regular' color='inverse'>Close</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-      )}
-    </SafeAreaView>
+        {visible && (
+          <Modal
+            visible={visible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setIsVisible(false)}>
+            <ImageViewer
+              enablePreload={true}
+              index={0}
+              renderIndicator={() => null}
+              imageUrls={images}
+              enableSwipeDown={false}
+              enableImageZoom={true}
+              saveToLocalByLongPress={true}
+            />
+            <View style={{ position: 'absolute', bottom: bottomHeight(), alignSelf: 'center' }}>
+              <TouchableOpacity onPress={() => setIsVisible(false)} style={{ paddingHorizontal: 20, paddingVertical: 15, borderRadius: 50, backgroundColor: '#CA282C' }}>
+                <ThemedText customSize={14} weight='Regular' color='inverse'>Close</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </Modal>
+        )}
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -601,7 +606,7 @@ const BranchSwitch = () => {
             {mutate.isLoading || mutate.isPending ? (
               <ActivityIndicator size={'large'} color={'black'} />
             ) : (
-              <ThemedText size='md' weight='Regular' >
+              <ThemedText customSize={14} weight='Regular' >
                 {CompanyBranchNameData?.oldBranch[0]?.name ||
                   selectedBranchName}
               </ThemedText>
@@ -628,7 +633,7 @@ const BranchSwitch = () => {
                   selectedBranch === branch?.id && styles.selectedBranchItem,
                 ]}
                 onPress={() => handleBranchSelect(branch)}>
-                <ThemedText size='md' weight='Regular' >
+                <ThemedText customSize={14} weight='Regular' >
                   {branch?.name}
                 </ThemedText>
               </TouchableOpacity>
@@ -641,6 +646,75 @@ const BranchSwitch = () => {
 };
 
 const styles = StyleSheet.create({
+  attractiveLogoutCard: {
+    backgroundColor: '#FFF5F5',
+    borderWidth: 1.2,
+    borderColor: '#FECACA',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#CA282C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  attractiveLogoutLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  attractiveLogoutIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutSheetContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+    alignItems: 'center',
+  },
+  logoutSheetIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutSheetBtnContainer: {
+    width: '100%',
+    marginTop: 20,
+    gap: 10,
+  },
+  logoutConfirmBtn: {
+    width: '100%',
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#CA282C',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#CA282C',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  logoutCancelBtn: {
+    width: '100%',
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,

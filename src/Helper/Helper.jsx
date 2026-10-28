@@ -89,7 +89,7 @@ export const DEFAULT_IMAGE =
 
 export const SCREEN_WIDTH = Dimensions.get('window').width;
 
-export const BOTTOM_TAB_HEIGHT = 55;
+export const BOTTOM_TAB_HEIGHT = 60;
 
 
 export const normalizePath = async (path) => {
