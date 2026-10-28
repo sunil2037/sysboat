@@ -99,6 +99,7 @@ public class FaceRecognitionCameraView extends FrameLayout {
     private final Executor recognitionExecutor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private boolean isCameraFrozen = false;
+    private int analyzedFrameCount = 0;
     // Camera
     private PreviewView previewView;
     private ProcessCameraProvider cameraProvider;
@@ -172,7 +173,44 @@ public class FaceRecognitionCameraView extends FrameLayout {
         setupDetector();
         loadModel();
         loadRecognitionsNative();
-        startCamera();
+    }
+
+    @Override
+    public void requestLayout() {
+        super.requestLayout();
+        post(() -> {
+            if (getWidth() > 0 && getHeight() > 0) {
+                measure(
+                    MeasureSpec.makeMeasureSpec(getWidth(), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(getHeight(), MeasureSpec.EXACTLY)
+                );
+                layout(getLeft(), getTop(), getRight(), getBottom());
+            }
+        });
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        post(() -> {
+            if (isAttachedToWindow()) {
+                measure(
+                    MeasureSpec.makeMeasureSpec(getWidth(), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(getHeight(), MeasureSpec.EXACTLY)
+                );
+                layout(getLeft(), getTop(), getRight(), getBottom());
+                startCamera();
+            }
+        });
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        analyzedFrameCount = 0;
+        if (cameraProvider != null) {
+            cameraProvider.unbindAll();
+        }
     }
 
 
@@ -231,6 +269,16 @@ public class FaceRecognitionCameraView extends FrameLayout {
 
     // -------------------- CAMERA --------------------
     private void startCamera() {
+        if (!isAttachedToWindow()) return;
+        if (getWidth() <= 0 || getHeight() <= 0) {
+            post(() -> {
+                if (isAttachedToWindow()) {
+                    startCamera();
+                }
+            });
+            return;
+        }
+
         Log.d(TAG, "startCamera: Starting camera");
         if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -244,6 +292,7 @@ public class FaceRecognitionCameraView extends FrameLayout {
         cameraProviderFuture = ProcessCameraProvider.getInstance(getContext());
         cameraProviderFuture.addListener(() -> {
             try {
+                if (!isAttachedToWindow()) return;
                 cameraProvider = cameraProviderFuture.get();
                 bindCameraUseCases();
             } catch (ExecutionException | InterruptedException e) {
@@ -322,6 +371,14 @@ public class FaceRecognitionCameraView extends FrameLayout {
     // -------------------- IMAGE PROCESSING --------------------
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void processImageProxy(@NonNull ImageProxy imageProxy) {
+        if (analyzedFrameCount == 0) {
+            analyzedFrameCount++;
+            Context context = getContext();
+            if (context instanceof ReactContext) {
+                ((ReactContext) context).getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                        .emit("onCameraReady", Arguments.createMap());
+            }
+        }
         Log.v(TAG, "processImageProxy: New frame received");
 
         // CHECK IF CAMERA IS FROZEN

@@ -157,32 +157,32 @@ export default function FaceRecognitionEx({ onFaceRecognized, navigation }) {
           </Text>
         </View>
       ) : <>
-      {profileData?.isFaceRegistered && (
-        <TouchableOpacity disabled={refresh} onPress={handleRefreshFace} style={{ position: 'absolute', top: -STATUS_BAR_HEIGHT(), right: 25 }}>
-          {refresh ? (
-            <ActivityIndicator color={'black'} size={30} />
-          ) : (
-            <ReloadIcon width={30} height={30} />
-          )}
-        </TouchableOpacity>
-      )}
+        {profileData?.isFaceRegistered && (
+          <TouchableOpacity disabled={refresh} onPress={handleRefreshFace} style={{ position: 'absolute', top: -STATUS_BAR_HEIGHT(), right: 25 }}>
+            {refresh ? (
+              <ActivityIndicator color={'black'} size={30} />
+            ) : (
+              <ReloadIcon width={30} height={30} />
+            )}
+          </TouchableOpacity>
+        )}
 
-      {!profileData?.isFaceRegistered ? (
-        <View style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-          <View style={{ gap: 20 }}>
-            <Text style={{ fontFamily: 'Poppins-Medium', fontSize: 16, textAlign: 'center' }}>There is no face registered on your profile.</Text>
-            <TouchableOpacity onPress={() => navigation.push('FaceRecognitionScreen')} style={{ backgroundColor: '#CA282C', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 50, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'Poppins-Medium', color: 'white', }}>Register Face</Text>
-            </TouchableOpacity>
+        {!profileData?.isFaceRegistered ? (
+          <View style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+            <View style={{ gap: 20 }}>
+              <Text style={{ fontFamily: 'Poppins-Medium', fontSize: 16, textAlign: 'center' }}>There is no face registered on your profile.</Text>
+              <TouchableOpacity onPress={() => navigation.push('FaceRecognitionScreen')} style={{ backgroundColor: '#CA282C', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 50, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontFamily: 'Poppins-Medium', color: 'white', }}>Register Face</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      ) : (
-        recognitionMode === 'offline' ? (
-          <FaceRecognitionOfflineComponent cameraRef={cameraRef} onFaceRecognized={onFaceRecognized} />
         ) : (
-          <LiveRecognitionComponent cameraRef={cameraRef} FaceDetailsData={FaceDetailsData} isLoading={isLoading || isPending} />
-        )
-      )}
+          recognitionMode === 'offline' ? (
+            <FaceRecognitionOfflineComponent cameraRef={cameraRef} onFaceRecognized={onFaceRecognized} />
+          ) : (
+            <LiveRecognitionComponent cameraRef={cameraRef} FaceDetailsData={FaceDetailsData} isLoading={isLoading || isPending} />
+          )
+        )}
       </>}
 
     </View>

@@ -14,10 +14,10 @@ const SLIDER_WIDTH = 70;
 const NAVBAR_HEIGHT = 60;
 const PADDING = 2;
 
-const BottomNavigation = ({ hide_profile_tab, navigation }) => {
+const BottomNavigation = ({ hide_profile_tab, navigation, state }) => {
   const [activeTab, setActiveTab] = useState('Home');
   const tabIndex = useSharedValue(0);
-  const navigationState = useNavigationState(state => state);
+  const navigationState = useNavigationState(navState => navState);
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'android' ? 20 + insets.bottom : 20;
 
@@ -67,31 +67,40 @@ const BottomNavigation = ({ hide_profile_tab, navigation }) => {
     };
   });
 
-  // ✅ Track navigation route changes
+  // ✅ Track navigation route changes safely
   useEffect(() => {
-    if (navigationState?.routes?.length > 0) {
+    // 1. Direct tab navigator route from props if available
+    let currentRouteName = state?.routes?.[state?.index]?.name;
+
+    // 2. Fallback to navigationState if props.state is not available
+    if (!currentRouteName && navigationState?.routes?.length > 0 && navigationState.index !== undefined) {
       let currentRoute = navigationState.routes[navigationState.index];
-      if (currentRoute.state && currentRoute.state.index !== undefined) {
+      while (currentRoute?.state && currentRoute.state.index !== undefined && currentRoute.state.routes) {
         currentRoute = currentRoute.state.routes[currentRoute.state.index];
       }
+      currentRouteName = currentRoute?.name;
+    }
 
-      if (currentRoute?.name) {
-        const newTab =
-          currentRoute.name === 'Home'
-            ? 'Home'
-            : currentRoute.name === 'Dashboard'
-              ? 'Dashboard'
-              : currentRoute.name === 'ProfileStack'
-                ? 'Profile'
-                : 'Home';
+    if (currentRouteName) {
+      let newTab = null;
+      if (currentRouteName === 'Home') {
+        newTab = 'Home';
+      } else if (currentRouteName === 'Dashboard') {
+        newTab = 'Dashboard';
+      } else if (
+        currentRouteName === 'ProfileStack' ||
+        currentRouteName === 'Profile' ||
+        currentRouteName === 'ProfileMain'
+      ) {
+        newTab = 'Profile';
+      }
 
-        if (activeTab !== newTab) {
-          setActiveTab(newTab);
-          tabIndex.value = tabPositions[newTab];
-        }
+      if (newTab && activeTab !== newTab) {
+        setActiveTab(newTab);
+        tabIndex.value = tabPositions[newTab];
       }
     }
-  }, [navigationState]);
+  }, [state?.index, navigationState]);
 
   // ✅ Hide tabs dynamically
   useEffect(() => {
@@ -104,7 +113,8 @@ const BottomNavigation = ({ hide_profile_tab, navigation }) => {
 
   const handleTabPress = tabName => {
     setActiveTab(tabName);
-    navigation.navigate(tabName === 'Profile' ? 'ProfileStack' : tabName);
+    const targetRoute = tabName === 'Profile' ? 'ProfileStack' : tabName;
+    navigation.navigate(targetRoute);
     tabIndex.value = tabPositions[tabName];
   };
 

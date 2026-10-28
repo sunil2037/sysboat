@@ -37,6 +37,7 @@ import {
   Down,
   Pen,
   EditIcon,
+  AlertIcon,
 } from '../Helper/IconsLoad';
 import { useAuth } from '../Context/AuthContext';
 import useApi from '../Apis/Services/ApiConfig';
@@ -436,7 +437,10 @@ const Profile = ({ navigation }) => {
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={showLogoutPopup}
-                style={styles.attractiveLogoutCard}>
+                style={[
+                  styles.attractiveLogoutCard,
+                  { marginTop: Boolean(profileData?.permission?.branch_switch) ? 0 : 15 },
+                ]}>
                 <View style={styles.attractiveLogoutLeft}>
                   <View style={styles.attractiveLogoutIconBadge}>
                     <LogoutIcon width={20} height={20} />
@@ -612,9 +616,9 @@ const BranchSwitch = () => {
               </ThemedText>
             )}
             {branches.length > 1 && (
-              <Animated.Text style={[styles.arrow, animatedArrowStyle]}>
+              <Animated.View style={animatedArrowStyle}>
                 <Down />
-              </Animated.Text>
+              </Animated.View>
             )}
           </View>
         </View>
