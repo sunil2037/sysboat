@@ -1,6 +1,6 @@
 {
   "name": "sysboat",
-  "version": "1.3.6",
+  "version": "1.6.1",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
